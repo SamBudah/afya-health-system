@@ -2,7 +2,7 @@
 
 [![GitHub Stars](https://img.shields.io/github/stars/SamBudah/afya-health-system)](https://github.com/SamBudah/afya-health-system/stargazers)
 
-A secure health information management system for tracking clients and their program enrollments, built with React, Node.js, and Firebase.
+A simple secure health information management system for tracking clients and their program enrollments, built with React, Node.js, and Firebase.
 
 ![Afya System Screenshot]
 ![alt text](image.png)
