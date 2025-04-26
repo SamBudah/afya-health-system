@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { 
   Box, 
   Typography, 
@@ -9,107 +8,221 @@ import {
   MenuItem, 
   Button,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Grid,
+  Paper,
+  FormHelperText,
+  Avatar,
+  ListItemAvatar,
+  ListItemText
 } from '@mui/material';
-import { MedicalServices, Group } from '@mui/icons-material';
+import { MedicalServices, People, ListAlt } from '@mui/icons-material';
+import { fetchClients, fetchPrograms, createEnrollment } from '../services/apiService';
 
 export default function ProgramEnrollment() {
-  const [clients, setClients] = useState([]);
-  const [programs, setPrograms] = useState([]);
-  const [selectedClient, setSelectedClient] = useState('');
-  const [selectedProgram, setSelectedProgram] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
+  const [state, setState] = useState({
+    clients: [],
+    programs: [],
+    selectedClient: '',
+    selectedProgram: '',
+    loading: false,
+    success: false,
+    error: null
+  });
+
+  const {
+    clients,
+    programs,
+    selectedClient,
+    selectedProgram,
+    loading,
+    success,
+    error
+  } = state;
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [clientsRes, programsRes] = await Promise.all([
-          axios.get('/api/clients'),
-          axios.get('/api/programs')
-        ]);
-        setClients(clientsRes.data);
-        setPrograms(programsRes.data);
-      } catch (err) {
-        setError('Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      const [clientsData, programsData] = await Promise.all([
+        fetchClients(),
+        fetchPrograms()
+      ]);
+      setState(prev => ({
+        ...prev,
+        clients: clientsData,
+        programs: programsData,
+        loading: false
+      }));
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        error: err.message || 'Failed to load required data',
+        loading: false
+      }));
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedClient || !selectedProgram) return;
+
     try {
-      await axios.post('/api/enrollments', {
+      setState(prev => ({ ...prev, loading: true, error: null }));
+      
+      await createEnrollment({
         clientId: selectedClient,
         programId: selectedProgram
       });
-      setSuccess(true);
-      setSelectedClient('');
-      setSelectedProgram('');
-      setTimeout(() => setSuccess(false), 3000);
+
+      setState(prev => ({
+        ...prev,
+        success: true,
+        selectedClient: '',
+        selectedProgram: '',
+        loading: false
+      }));
+
     } catch (err) {
-      setError(err.response?.data?.message || 'Enrollment failed');
+      setState(prev => ({
+        ...prev,
+        error: err.message || 'Failed to complete enrollment',
+        loading: false
+      }));
     }
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        <Group sx={{ verticalAlign: 'middle', mr: 1 }} />
-        Program Enrollment
+    <Paper elevation={3} sx={{ p: 3, my: 3 }}>
+      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        <MedicalServices sx={{ mr: 1, verticalAlign: 'middle' }} />
+        Client Program Enrollment
       </Typography>
 
-      {loading && <CircularProgress />}
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {success && <Alert severity="success" sx={{ mb: 2 }}>Enrollment successful!</Alert>}
+      {state.error && (
+        <Alert severity="error" onClose={() => setState(prev => ({ ...prev, error: null }))} sx={{ mb: 3 }}>
+          {state.error}
+        </Alert>
+      )}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2, maxWidth: 600 }}>
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Client</InputLabel>
-          <Select
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-            label="Select Client"
-            required
-          >
-            {clients.map(client => (
-              <MenuItem key={client.id} value={client.id}>
-                {client.firstName} {client.lastName}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      {state.success && (
+        <Alert severity="success" onClose={() => setState(prev => ({ ...prev, success: false }))} sx={{ mb: 3 }}>
+          Enrollment successful! You can now enroll another client.
+        </Alert>
+      )}
 
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Program</InputLabel>
-          <Select
-            value={selectedProgram}
-            onChange={(e) => setSelectedProgram(e.target.value)}
-            label="Select Program"
-            required
-          >
-            {programs.map(program => (
-              <MenuItem key={program.id} value={program.id}>
-                {program.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Box component="form" onSubmit={handleSubmit}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>
+                <People sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Select Client
+              </InputLabel>
+              <Select
+                value={state.selectedClient}
+                onChange={(e) => setState(prev => ({ ...prev, selectedClient: e.target.value }))}
+                label={
+                  <>
+                    <People sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    Select Client
+                  </>
+                }
+                required
+                disabled={state.loading || state.clients.length === 0}
+              >
+                <MenuItem value="" disabled>
+                  <ListItemAvatar>
+                    <Avatar>
+                      <People />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary="Select a client" secondary="Choose from registered clients" />
+                </MenuItem>
+                {state.clients.map(client => (
+                  <MenuItem key={client.id} value={client.id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        {client.firstName.charAt(0)}{client.lastName.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={`${client.firstName} ${client.lastName}`}
+                      secondary={`ID: ${client.id}`}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                Select which client to enroll in a program
+              </FormHelperText>
+            </FormControl>
+          </Grid>
 
-        <Button 
-          type="submit" 
-          variant="contained" 
-          size="large"
-          startIcon={<MedicalServices />}
-        >
-          Enroll Client
-        </Button>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>
+                <ListAlt sx={{ mr: 1, verticalAlign: 'middle' }} />
+                Select Program
+              </InputLabel>
+              <Select
+                value={state.selectedProgram}
+                onChange={(e) => setState(prev => ({ ...prev, selectedProgram: e.target.value }))}
+                label={
+                  <>
+                    <ListAlt sx={{ mr: 1, verticalAlign: 'middle' }} />
+                    Select Program
+                  </>
+                }
+                required
+                disabled={state.loading || state.programs.length === 0}
+              >
+                <MenuItem value="" disabled>
+                  <ListItemAvatar>
+                    <Avatar>
+                      <ListAlt />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText primary="Select a program" secondary="Available health programs" />
+                </MenuItem>
+                {state.programs.map(program => (
+                  <MenuItem key={program.id} value={program.id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        {program.name.charAt(0)}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText 
+                      primary={program.name}
+                      secondary={program.description.substring(0, 30) + '...'}
+                    />
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>
+                Select a health program for enrollment
+              </FormHelperText>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12}>
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              startIcon={<MedicalServices />}
+              disabled={state.loading || !state.selectedClient || !state.selectedProgram}
+              fullWidth
+              sx={{ mt: 2 }}
+            >
+              {state.loading ? <CircularProgress size={24} /> : 'Enroll Client'}
+            </Button>
+          </Grid>
+        </Grid>
       </Box>
-    </Box>
+    </Paper>
   );
 }

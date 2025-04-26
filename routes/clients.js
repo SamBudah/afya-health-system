@@ -40,7 +40,16 @@ router.get('/search', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const client = await clientService.getClientById(req.params.id);
-    res.json(client);
+    const enrollments = await enrollmentService.getClientEnrollments(req.params.id);
+    
+    const programs = await Promise.all(
+      enrollments.map(e => programService.getProgramById(e.programId))
+    );
+
+    res.json({
+      client,
+      programs
+    });
   } catch (error) {
     res.status(404).json({ message: error.message });
   }

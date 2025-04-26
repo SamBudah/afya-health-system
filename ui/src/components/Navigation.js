@@ -12,7 +12,8 @@ import {
   PersonAdd as PersonAddIcon,
   Search as SearchIcon,
   Group as GroupIcon,
-  MedicalServices as MedicalServicesIcon
+  MedicalServices as MedicalServicesIcon,
+  AddCircle
 } from '@mui/icons-material';
 
 export default function Navigation() {
@@ -43,6 +44,14 @@ export default function Navigation() {
           <Button 
             color="inherit" 
             component={Link} 
+            to="/create-program"
+            startIcon={<AddCircle />}
+          >
+            Create Program
+          </Button>
+          <Button 
+            color="inherit" 
+            component={Link} 
             to="/search" 
             startIcon={<SearchIcon />}
           >
@@ -56,6 +65,30 @@ export default function Navigation() {
           >
             Program Enrollment
           </Button>
+          <Button 
+            color="inherit" 
+            component={Link} 
+            to="/groups" 
+            startIcon={<GroupIcon />}
+          >
+            Groups
+          </Button>
+        </Box>
+        <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
+          <IconButton 
+            color="inherit" 
+            component={Link} 
+            to="/"
+          >
+            <HomeIcon />
+          </IconButton>
+          <IconButton 
+            color="inherit" 
+            component={Link} 
+            to="/register"
+          >
+            <PersonAddIcon />
+          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>

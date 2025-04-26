@@ -1,92 +1,132 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
+  Paper, 
+  Avatar, 
   List, 
   ListItem, 
-  ListItemText, 
+  ListItemAvatar, 
+  ListItemText,
+  Button,
   Chip,
-  CircularProgress
+  Divider,
+  CircularProgress,
+  Grid // Added Grid import
 } from '@mui/material';
-import { MedicalServices, Person, Email, Phone, Cake } from '@mui/icons-material';
+import { Person, Email, Phone, Cake, MedicalServices, ArrowBack } from '@mui/icons-material';
+import { fetchClientById } from '../services/apiService'; // Updated import
 
-export default function ClientProfile({ clientId }) {
-  const [client, setClient] = useState(null);
+export default function ClientProfile() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [clientData, setClientData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchClientData = async () => {
       try {
-        const res = await axios.get(`/api/enrollments/client/${clientId}`);
-        setClient(res.data);
-      } catch (error) {
-        console.error('Error fetching client:', error);
+        const response = await fetchClientById(id); // Using the new service function
+        setClientData(response.data);
+      } catch (err) {
+        setError(err.message || 'Failed to load client data');
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
-  }, [clientId]);
+    
+    fetchClientData();
+  }, [id]);
 
-  if (loading) return <CircularProgress />;
-  if (!client) return <Typography>Client not found</Typography>;
+  if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} />;
+  if (error) return <Typography color="error">{error}</Typography>;
+  if (!clientData) return <Typography>Client not found</Typography>;
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        <Person sx={{ verticalAlign: 'middle', mr: 1 }} />
-        {client.client.firstName} {client.client.lastName}
-      </Typography>
+    <Paper elevation={3} sx={{ p: 3, my: 3 }}>
+      <Button 
+        startIcon={<ArrowBack />} 
+        onClick={() => navigate(-1)}
+        sx={{ mb: 2 }}
+      >
+        Back
+      </Button>
 
-      <List sx={{ width: '100%', maxWidth: 600, bgcolor: 'background.paper' }}>
-        <ListItem>
-          <ListItemText 
-            primary="Email" 
-            secondary={client.client.email} 
-            secondaryTypographyProps={{ sx: { display: 'flex', alignItems: 'center' } }}
-          />
-          <Email color="action" />
-        </ListItem>
-        
-        <ListItem>
-          <ListItemText 
-            primary="Phone" 
-            secondary={client.client.phone || 'Not provided'} 
-          />
-          <Phone color="action" />
-        </ListItem>
-        
-        <ListItem>
-          <ListItemText 
-            primary="Date of Birth" 
-            secondary={client.client.dateOfBirth || 'Not provided'} 
-          />
-          <Cake color="action" />
-        </ListItem>
-      </List>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Avatar sx={{ width: 80, height: 80, mr: 3 }}>
+          {clientData.client.firstName.charAt(0)}{clientData.client.lastName.charAt(0)}
+        </Avatar>
+        <Box>
+          <Typography variant="h4">
+            {clientData.client.firstName} {clientData.client.lastName}
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Client ID: {id}
+          </Typography>
+        </Box>
+      </Box>
 
-      <Typography variant="h5" sx={{ mt: 4, mb: 2 }}>
-        <MedicalServices sx={{ verticalAlign: 'middle', mr: 1 }} />
-        Enrolled Programs
-      </Typography>
-      
-      {client.programs.length > 0 ? (
-        <List>
-          {client.programs.map(program => (
-            <ListItem key={program.id}>
-              <Chip 
-                label={program.name} 
-                color="primary" 
-                sx={{ mr: 2 }} 
-              />
-              <ListItemText secondary={program.description} />
-            </ListItem>
-          ))}
-        </List>
-      ) : (
-        <Typography>No program enrollments</Typography>
-      )}
-    </Box>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Paper elevation={1} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <Person sx={{ mr: 1 }} /> Basic Information
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Email sx={{ mr: 2, color: 'text.secondary' }} />
+              <Typography>{clientData.client.email || 'Not provided'}</Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Phone sx={{ mr: 2, color: 'text.secondary' }} />
+              <Typography>{clientData.client.phone || 'Not provided'}</Typography>
+            </Box>
+
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Cake sx={{ mr: 2, color: 'text.secondary' }} />
+              <Typography>
+                {clientData.client.dateOfBirth || 'Date of birth not provided'}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Paper elevation={1} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <MedicalServices sx={{ mr: 1 }} /> Enrolled Programs
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            {clientData.programs.length > 0 ? (
+              <List>
+                {clientData.programs.map(program => (
+                  <ListItem key={program.id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        <MedicalServices />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={program.name}
+                      secondary={program.description}
+                    />
+                    <Chip label="Active" color="success" size="small" />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography color="text.secondary">
+                This client is not enrolled in any programs
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Paper>
   );
 }

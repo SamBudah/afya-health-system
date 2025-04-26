@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { 
@@ -17,7 +17,7 @@ export default function SearchClients() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) return;
     
     setLoading(true);
@@ -29,12 +29,16 @@ export default function SearchClients() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
 
   useEffect(() => {
     const timeoutId = setTimeout(handleSearch, 500);
     return () => clearTimeout(timeoutId);
-  }, [searchTerm]);
+  }, [handleSearch]);
+
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -44,7 +48,7 @@ export default function SearchClients() {
         fullWidth
         label="Search by name or email"
         value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        onChange={handleInputChange}
         sx={{ mb: 3 }}
       />
       
@@ -55,9 +59,8 @@ export default function SearchClients() {
         {results.map((client) => (
           <div key={client.id}>
             <ListItem 
-              key={client.id}
               component={Link}
-              to={`/client/${client.id}`}
+              to={`/clients/${client.id}`}
               sx={{
                 textDecoration: 'none',
                 color: 'inherit',
